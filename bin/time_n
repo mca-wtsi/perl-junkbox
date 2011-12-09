@@ -11,6 +11,9 @@ CPU times.
 
 This is an incomplete hack, just enough for now.
 
+It seems to have worse precision than the Bash built-in C<time> .  I
+have C<CONFIG_HZ=250> .
+
 =cut
 
 
@@ -30,10 +33,15 @@ sub main {
         my @t1 = times;
         warn sprintf("[w] Command returned 0x%02X\n", $?) if $?;
 
-        $T{n}++;
-        $T{usr} += $t1[2] - $t0[2];
-        $T{sys} += $t1[3] - $t1[3];
         # TODO: keep the squares & work out some variance
+        my %t = (usr => $t1[2] - $t0[2],
+                 sys => $t1[3] - $t1[3]);
+        $T{n}++;
+        while (my ($k, $v) = each %t) {
+            $T{$k} += $v;
+        }
+
+        printf("  Run %d\t%s\n", $T{n}, join ' ', %t);
     }
 
     foreach my $type (qw( usr sys )) {
