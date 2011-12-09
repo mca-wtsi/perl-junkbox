@@ -60,7 +60,9 @@ package.
 =cut
 
 sub loader_subs {
-    my ($pkg) = @_;
+    my ($pkg, $import_str) = @_;
+    $import_str = '' unless defined $import_str;
+
     my ($sym) = symified($pkg);
     return qq{
 sub load__$sym {
@@ -69,8 +71,8 @@ sub load__$sym {
 }
 
 sub use__$sym {
-  eval "use $pkg; 1" ||
-    die "use $pkg: \$@";
+  eval "use $pkg $import_str; 1" ||
+    die "use $pkg $import_str: \$@";
   1;
 }
 
@@ -78,13 +80,14 @@ sub use__$sym {
 }
 
 sub call_subs {
-    my @pkg = @_;
+    my ($interleave, @pkg) = @_;
     my @sym = symified(@pkg);
 
     return join "\n",
-      ((map {qq{load__$_();\n}} @sym),
-       '',
-       (map {qq{use__$_();\n}} @sym));
+      ($interleave
+       ? ((map {qq{  load__$_();\n   use__$_();}} @sym), '')
+       : ((map {qq{load__$_();}} @sym), '',
+          (map {qq{use__$_();}} @sym), '') );
 }
 
 
@@ -97,14 +100,17 @@ result.
 =cut
 
 sub write_neighbour {
+    my @arg = @_;
     my ($fn) = __FILE__;
     $fn =~ s/Generator\.pm$/.pm/ or die "Can't make name from $fn";
     open my $fh, '>', $fn or die "Can't overwrite to $fn: $!";
 
-    print $fh module_text();
+    print $fh module_text(@arg);
 }
 
 sub module_text {
+    my ($interleave, $import_str) = @_;
+
     my $pkg = 'package';
     local $" = "\n";
     return <<"EOF";
@@ -112,10 +118,11 @@ $pkg Moose::ProfiledLoading;
 use strict;
 use warnings;
 
-@{[ map { loader_subs($_) } packages() ]}
+@{[ map { loader_subs($_, $import_str) } packages() ]}
 
 sub LOAD_ALL {
-@{[ call_subs(packages()) ]}
+@{[ call_subs($interleave, packages()) ]}
+  1;
 }
 LOAD_ALL();
 
@@ -128,7 +135,7 @@ sub import {
     if (0 == @arg) {
         # nop
     } elsif (1 == @arg && $arg[0] eq 'save') {
-        write_neighbour();
+        write_neighbour(0, '()');
     } else {
         die "Cannot import @arg";
     }
@@ -151,8 +158,8 @@ Moose::Meta::Class
 Moose::Meta::TypeConstraint
 
 metaclass
-Moose::Meta::Attribute
 Moose::Util::TypeConstraints
+Moose::Meta::Attribute
 
 Moose::Meta::TypeCoercion
 Moose::Meta::Attribute
