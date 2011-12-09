@@ -2,6 +2,8 @@ use strict;
 use warnings;
 package Moose::ProfiledLoadingGenerator;
 
+use List::MoreUtils 'uniq';
+
 
 =head1 DESCRIPTION
 
@@ -31,7 +33,7 @@ List of package names to load
 my @pkgs;
 sub packages {
     unless (@pkgs) {
-        @pkgs = grep { ! /^\s*(#|$)/ } <DATA>;
+        @pkgs = uniq grep { ! /^\s*(#|$)/ } <DATA>;
         chomp @pkgs;
     }
     return @pkgs;
@@ -50,19 +52,17 @@ sub symified {
 }
 
 
-=head2 loader_sub($package)
+=head2 loader_subs($package)
 
-Return text of subroutines definition, and calls to them.
-
-These require and import the packages in turn.
+Return text of subroutines definitions to require and import the
+package.
 
 =cut
 
-sub loader_sub {
+sub loader_subs {
     my ($pkg) = @_;
     my ($sym) = symified($pkg);
     return qq{
-
 sub load__$sym {
   require $pkg;
   1;
@@ -70,14 +70,21 @@ sub load__$sym {
 
 sub use__$sym {
   eval "use $pkg; 1" ||
-    die "use $pkg: $@";
+    die "use $pkg: \$@";
   1;
 }
 
-load__$sym();
-use__$sym();
-
 };
+}
+
+sub call_subs {
+    my @pkg = @_;
+    my @sym = symified(@pkg);
+
+    return join "\n",
+      ((map {qq{load__$_();\n}} @sym),
+       '',
+       (map {qq{use__$_();\n}} @sym));
 }
 
 
@@ -105,7 +112,12 @@ $pkg Moose::ProfiledLoading;
 use strict;
 use warnings;
 
-@{[ map { loader_sub($_) } packages() ]}
+@{[ map { loader_subs($_) } packages() ]}
+
+sub LOAD_ALL {
+@{[ call_subs(packages()) ]}
+}
+LOAD_ALL();
 
 1;
 EOF
@@ -137,6 +149,11 @@ Class::MOP
 
 Moose::Meta::Class
 Moose::Meta::TypeConstraint
+
+metaclass
+Moose::Meta::Attribute
+Moose::Util::TypeConstraints
+
 Moose::Meta::TypeCoercion
 Moose::Meta::Attribute
 Moose::Meta::Instance
@@ -151,7 +168,6 @@ Moose::Meta::Role::Application::ToClass
 Moose::Meta::Role::Application::ToRole
 Moose::Meta::Role::Application::ToInstance
 
-Moose::Util::TypeConstraints
 Moose::Util
 
 Moose::Meta::Attribute::Native
