@@ -8,7 +8,7 @@ sub noisef {
 #    warn sprintf(@_);
 }
 
-sub load_and_hack {
+sub load_real {
     $hackit ++;
     die "Recursing is not what I wanted" if $hackit > 1;
 
@@ -28,7 +28,9 @@ sub load_and_hack {
     rerequire();
 
     noisef("  Loaded the real one from %s", $INC{$pkgfn});
+}
 
+sub hack {
     *Class::MOP::Class::make_immutable = \&make_immutable__NOP;
 }
 
@@ -43,6 +45,8 @@ sub rerequire {
 }
 
 # This needs to happen early in the compilation of Moose
-load_and_hack();
+load_real();
+hack() if $ENV{CLASS_MOP_NO_IMMUT};
+
 
 1;

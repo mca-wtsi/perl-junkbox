@@ -50,9 +50,11 @@ sub symified {
 }
 
 
-=head2 loader_sub(@packages)
+=head2 loader_sub($package)
 
-Return text of a subroutine definition, and a call to it.
+Return text of subroutines definition, and calls to them.
+
+These require and import the packages in turn.
 
 =cut
 
@@ -60,12 +62,20 @@ sub loader_sub {
     my ($pkg) = @_;
     my ($sym) = symified($pkg);
     return qq{
+
 sub load__$sym {
   require $pkg;
   1;
 }
 
+sub use__$sym {
+  eval "use $pkg; 1" ||
+    die "use $pkg: $@";
+  1;
+}
+
 load__$sym();
+use__$sym();
 
 };
 }
@@ -96,14 +106,6 @@ use strict;
 use warnings;
 
 @{[ map { loader_sub($_) } packages() ]}
-
-sub use_Moose {
-  eval "use Moose; 1" ||
-    die "use Moose: $@";
-  1;
-}
-
-use_Moose();
 
 1;
 EOF
