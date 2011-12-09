@@ -1,0 +1,46 @@
+#! /usr/bin/perl
+
+=head1 SYNOPSIS
+
+ time_n -n 5 perl -I lib -e 'do stuff'
+
+=head1 DESCRIPTION
+
+Run it (default is five times) and report child process user & system
+CPU times.
+
+This is an incomplete hack, just enough for now.
+
+=cut
+
+
+sub main {
+
+    my $N = 5;
+    if (@ARGV>1 && $ARGV[0] eq '-n') {
+        (undef, $N) = splice @ARGV, 0, 2;
+    }
+
+    my @cmd = @ARGV;
+    my %T;
+    for my $n (1 .. $N) {
+        # ($user,$system,$cuser,$csystem) = times;
+        my @t0 = times;
+        system(@cmd);
+        my @t1 = times;
+        warn sprintf("[w] Command returned 0x%02X\n", $?) if $?;
+
+        $T{n}++;
+        $T{usr} += $t1[2] - $t0[2];
+        $T{sys} += $t1[3] - $t1[3];
+        # TODO: keep the squares & work out some variance
+    }
+
+    foreach my $type (qw( usr sys )) {
+        printf("Time %s: %.3fsec/%d = %.4fsec\n", $type,
+               $T{$type}, $T{n},
+               $T{$type} / $T{n});
+    }
+}
+
+main();
