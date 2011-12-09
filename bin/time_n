@@ -16,6 +16,7 @@ have C<CONFIG_HZ=250> .
 
 =cut
 
+use Time::HiRes qw( gettimeofday tv_interval );
 
 sub main {
 
@@ -28,14 +29,17 @@ sub main {
     my %T;
     for my $n (1 .. $N) {
         # ($user,$system,$cuser,$csystem) = times;
-        my @t0 = times;
+        my @t0 = times();
+        my $t0 = [gettimeofday];
         system(@cmd);
-        my @t1 = times;
+        my $t = tv_interval($t0, [gettimeofday]);
+        my @t1 = times();
         warn sprintf("[w] Command returned 0x%02X\n", $?) if $?;
 
         # TODO: keep the squares & work out some variance
         my %t = (usr => $t1[2] - $t0[2],
-                 sys => $t1[3] - $t1[3]);
+                 sys => $t1[3] - $t0[3],
+                 wall => $t);
         $T{n}++;
         while (my ($k, $v) = each %t) {
             $T{$k} += $v;
@@ -44,7 +48,7 @@ sub main {
         printf("  Run %d\t%s\n", $T{n}, join ' ', %t);
     }
 
-    foreach my $type (qw( usr sys )) {
+    foreach my $type (qw( wall usr sys )) {
         printf("Time %s: %.3fsec/%d = %.4fsec\n", $type,
                $T{$type}, $T{n},
                $T{$type} / $T{n});
