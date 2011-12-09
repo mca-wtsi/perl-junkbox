@@ -219,7 +219,7 @@ likely to change, if a solution to the problems surfaces.
 =head1 AUTHOR
 
  Copyright (c) 2009 Genome Research Ltd.
- Author: Matthew Astley E<lt>mca@sanger.ac.ukE<gt>
+ Author: Matthew Astley <mca@sanger.ac.uk>
 
 This file is part of the perl-junkbox (pending separation into a
 specific project).
