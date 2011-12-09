@@ -1,0 +1,14 @@
+=head1 NAME
+
+perl-junkbox - snippets of code not to be used in production
+
+=head1 DESCRIPTION
+
+Have a rummage if the search engine brings you this way...
+
+=head1 AUTHOR
+
+Currently mostly (c) 2009,2011 Genome Research Limited written by
+Matthew Astley, licensed under the same terms as Perl 5.
+
+=cut
